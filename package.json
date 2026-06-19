@@ -1,0 +1,21 @@
+{
+  "name": "campusgpt",
+  "version": "2.0.0",
+  "private": true,
+  "description": "CampusGPT — AI-powered student learning platform",
+  "scripts": {
+    "backend": "cd backend && npm run dev",
+    "frontend": "cd frontend && npm run dev"
+}
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "start": "cd backend && npm start",
+    "build": "cd frontend && npm run build"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {}
+}

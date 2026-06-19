@@ -1,0 +1,14 @@
+# Ignore environment variables everywhere
+.env
+.env.local
+**/.env
+
+# Ignore node modules and build files
+node_modules/
+dist/
+**/node_modules/
+**/dist/
+
+# Ignore system/temporary folders
+.vscode/
+mnt/
