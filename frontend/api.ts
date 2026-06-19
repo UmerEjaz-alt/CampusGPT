@@ -5,8 +5,8 @@
 
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
 
-// In development, Vite proxies /api → backend. In production, pulls VITE_API_URL.
-export const API_BASE: string = import.meta.env.VITE_API_URL || '';
+// Fallback to your explicit, live production Vercel backend instance URL if env variable is absent
+export const API_BASE: string = import.meta.env.VITE_API_URL || 'https://campusgptbackend.vercel.app';
 
 /**
  * Centralized Axios instance configuration for JSON transaction payloads

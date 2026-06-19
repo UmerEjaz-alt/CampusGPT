@@ -8,10 +8,10 @@ const User = require('./User');
 
 // ─── Cookie config ────────────────────────────────────────
 const COOKIE_OPTIONS = {
-  httpOnly:  true,                          // No JS access — XSS protection
-  secure:    process.env.NODE_ENV === 'production', // HTTPS only in production
-  sameSite:  'strict',                      // CSRF protection
-  maxAge:    7 * 24 * 60 * 60 * 1000,     // 7 days in ms
+  httpOnly:  true,                                  // No JS access — XSS protection
+  secure:    true,                                  // CRITICAL FOR PROD: HTTPS only for cross-domain cookies
+  sameSite:  'none',                                // CRITICAL FOR PROD: Allows cross-site cookie tracking on separate Vercel domains
+  maxAge:    7 * 24 * 60 * 60 * 1000,               // 7 days in ms
   path:      '/',
 };
 
