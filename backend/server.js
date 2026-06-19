@@ -40,9 +40,7 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       connectSrc: [
         "'self'", 
-        process.env.FRONTEND_URL || 'https://campusgpt-virid.vercel.app',
-        'https://campusgpt-virid.vercel.app',
-        'http://localhost:3000'
+        "*", // Soften connectSrc restriction for production serverless deployments
       ],
       scriptSrc:  ["'self'"],
       styleSrc:   ["'self'", "'unsafe-inline'"],
@@ -53,25 +51,31 @@ app.use(helmet({
 }));
 
 // ─── CORS ─────────────────────────────────────────────────
-const allowedOrigins = [
-  process.env.FRONTEND_URL,
-  'https://campusgpt-virid.vercel.app', // Explicitly fallback to your production Vercel frontend URL
-  'http://localhost:3000',
-  'http://127.0.0.1:3000',
-];
-
 app.use(cors({
   origin: (origin, cb) => {
-    // Allow requests with no origin if not in prod, or safely pass through Vercel's proxy requests
+    // Allow requests with no origin (like mobile apps, Postman, or local system tools)
     if (!origin) return cb(null, true);
     
-    // Clean trailing slashes if present to prevent string matching issues
+    // Clean trailing slashes if present
     const cleanOrigin = origin.replace(/\/$/, "");
-    const cleanedOrigins = allowedOrigins.filter(Boolean).map(url => url.replace(/\/$/, ""));
 
-    if (cleanedOrigins.includes(cleanOrigin)) {
+    // 1. Check explicit local or configured production variables
+    const staticOrigins = [
+      process.env.FRONTEND_URL,
+      'https://campusgpt-virid.vercel.app',
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
+    ].filter(Boolean).map(url => url.replace(/\/$/, ""));
+
+    if (staticOrigins.includes(cleanOrigin)) {
       return cb(null, true);
     }
+
+    // 2. Dynamic Match: Automatically accept ANY dynamic Vercel deployment of your project
+    if (cleanOrigin.endsWith('.vercel.app') && cleanOrigin.includes('campusgpt')) {
+      return cb(null, true);
+    }
+    
     cb(new Error(`CORS blocked: ${origin}`));
   },
   credentials:    true,
