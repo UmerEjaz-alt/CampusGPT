@@ -1,7 +1,7 @@
 // ============================================================
 //  CampusGPT — Production Backend Server v2
 //  Express + Helmet + Rate Limiting + CORS + Cookie Auth
-//  + Compression + Morgan logging + trust proxy for Railway
+//  + Compression + Morgan logging + Serverless Optimization
 // ============================================================
 
 const express      = require('express');
@@ -23,7 +23,7 @@ const isProd = process.env.NODE_ENV === 'production';
 // ─── Connect MongoDB ──────────────────────────────────────
 connectDB();
 
-// ─── Trust proxy (needed for Railway / Heroku) ───────────
+// ─── Trust proxy (needed for Vercel / Railway) ───────────
 app.set('trust proxy', 1);
 
 // ─── Compression (gzip all responses) ────────────────────
@@ -55,8 +55,8 @@ const allowedOrigins = [
 ];
 app.use(cors({
   origin: (origin, cb) => {
-    // Allow requests with no origin (mobile apps, curl) in dev
-    if (!origin && !isProd) return cb(null, true);
+    // Allow requests with no origin if not in prod, or safely pass through Vercel's proxy requests
+    if (!origin) return cb(null, true);
     if (allowedOrigins.includes(origin)) return cb(null, true);
     cb(new Error(`CORS blocked: ${origin}`));
   },
@@ -115,13 +115,18 @@ process.on('SIGTERM', () => {
   process.exit(0);
 });
 
-app.listen(PORT, () => {
-  console.log(`\n  🎓  CampusGPT Backend`);
-  console.log(`  🌐  http://localhost:${PORT}`);
-  console.log(`  📦  env: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`  🗄️   MongoDB: ${process.env.MONGODB_URI ? '✅ configured' : '❌ NOT SET'}`);
-  console.log(`  🤖  Groq:    ${process.env.GROQ_API_KEY ? '✅ configured' : '❌ NOT SET'}`);
-  console.log(`  🔒  JWT:     ${process.env.JWT_SECRET   ? '✅ configured' : '❌ NOT SET'}\n`);
-});
+// ─── Start Server Only Locally ───────────────────────────
+// This prevents Vercel serverless functions from crashing due to active port listeners
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`\n  🎓  CampusGPT Backend`);
+    console.log(`  🌐  http://localhost:${PORT}`);
+    console.log(`  📦  env: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`  🗄️  MongoDB: ${process.env.MONGODB_URI ? '✅ configured' : '❌ NOT SET'}`);
+    console.log(`  🤖  Groq:    ${process.env.GROQ_API_KEY ? '✅ configured' : '❌ NOT SET'}`);
+    console.log(`  🔒  JWT:     ${process.env.JWT_SECRET   ? '✅ configured' : '❌ NOT SET'}\n`);
+  });
+}
 
+// Export the application instance for Vercel
 module.exports = app;
