@@ -5,8 +5,7 @@
   "description": "CampusGPT — AI-powered student learning platform",
   "scripts": {
     "backend": "cd backend && npm run dev",
-    "frontend": "cd frontend && npm run dev"
-}
+    "frontend": "cd frontend && npm run dev",
     "dev": "concurrently \"npm run backend\" \"npm run frontend\"",
     "start": "cd backend && npm start",
     "build": "cd frontend && npm run build"
