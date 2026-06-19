@@ -38,7 +38,12 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      connectSrc: ["'self'", process.env.FRONTEND_URL || 'http://localhost:3000'],
+      connectSrc: [
+        "'self'", 
+        process.env.FRONTEND_URL || 'https://campusgpt-virid.vercel.app',
+        'https://campusgpt-virid.vercel.app',
+        'http://localhost:3000'
+      ],
       scriptSrc:  ["'self'"],
       styleSrc:   ["'self'", "'unsafe-inline'"],
       imgSrc:     ["'self'", 'data:'],
@@ -49,15 +54,24 @@ app.use(helmet({
 
 // ─── CORS ─────────────────────────────────────────────────
 const allowedOrigins = [
-  process.env.FRONTEND_URL || 'http://localhost:3000',
+  process.env.FRONTEND_URL,
+  'https://campusgpt-virid.vercel.app', // Explicitly fallback to your production Vercel frontend URL
   'http://localhost:3000',
   'http://127.0.0.1:3000',
 ];
+
 app.use(cors({
   origin: (origin, cb) => {
     // Allow requests with no origin if not in prod, or safely pass through Vercel's proxy requests
     if (!origin) return cb(null, true);
-    if (allowedOrigins.includes(origin)) return cb(null, true);
+    
+    // Clean trailing slashes if present to prevent string matching issues
+    const cleanOrigin = origin.replace(/\/$/, "");
+    const cleanedOrigins = allowedOrigins.filter(Boolean).map(url => url.replace(/\/$/, ""));
+
+    if (cleanedOrigins.includes(cleanOrigin)) {
+      return cb(null, true);
+    }
     cb(new Error(`CORS blocked: ${origin}`));
   },
   credentials:    true,
