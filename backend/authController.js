@@ -41,6 +41,7 @@ const register = async (req, res) => {
 
     res.status(201).json({
       message: 'Account created successfully.',
+      token, // Passed explicitly for local storage fallback on mobile devices
       user: {
         id:                 user._id,
         username:           user.username,
@@ -86,6 +87,7 @@ const login = async (req, res) => {
 
     res.json({
       message: 'Login successful.',
+      token, // Passed explicitly for local storage fallback on mobile devices
       user: {
         id:                 user._id,
         username:           user.username,

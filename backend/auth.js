@@ -1,6 +1,6 @@
 // ============================================================
 //  CampusGPT — Auth Middleware
-//  Reads JWT from httpOnly cookie, protects private routes
+//  Reads JWT from cookie or Authorization header for cross-platform compatibility
 // ============================================================
 
 const jwt  = require('jsonwebtoken');
@@ -8,8 +8,13 @@ const User = require('./User');
 
 const protect = async (req, res, next) => {
   try {
-    // Read token from httpOnly cookie (never from localStorage)
-    const token = req.cookies?.token;
+    // 1. Try reading token from cookie. 
+    // 2. Fallback to extracting it from the Authorization Bearer header (for mobile devices)
+    let token = req.cookies?.token;
+
+    if (!token && req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
 
     if (!token) {
       return res.status(401).json({ error: 'Not authenticated. Please log in.' });
