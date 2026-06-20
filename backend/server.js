@@ -40,7 +40,7 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       connectSrc: [
         "'self'", 
-        "*", // Soften connectSrc restriction for production serverless deployments
+        "*", 
       ],
       scriptSrc:  ["'self'"],
       styleSrc:   ["'self'", "'unsafe-inline'"],
@@ -50,29 +50,13 @@ app.use(helmet({
   },
 }));
 
-// ─── Explicit Preflight Options Interceptor for Serverless ───
-// This forces Vercel serverless to acknowledge mobile preflights with credentials and tokens
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-  next();
-});
-
 // ─── CORS ─────────────────────────────────────────────────
 app.use(cors({
   origin: (origin, cb) => {
-    // Allow requests with no origin (like mobile apps, Postman, or local system tools)
     if (!origin) return cb(null, true);
     
-    // Clean trailing slashes if present
     const cleanOrigin = origin.replace(/\/$/, "");
 
-    // 1. Check explicit local or configured production variables
     const staticOrigins = [
       process.env.FRONTEND_URL,
       'https://campusgpt-virid.vercel.app',
@@ -84,7 +68,6 @@ app.use(cors({
       return cb(null, true);
     }
 
-    // 2. Dynamic Match: Automatically accept ANY dynamic Vercel deployment of your project
     if (cleanOrigin.endsWith('.vercel.app') && cleanOrigin.includes('campusgpt')) {
       return cb(null, true);
     }
@@ -94,6 +77,7 @@ app.use(cors({
   credentials:    true,
   methods:        ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept'],
+  optionsSuccessStatus: 200 // Responds to preflight requests smoothly for older browsers
 }));
 
 // ─── Body Parsers ─────────────────────────────────────────
@@ -105,7 +89,7 @@ app.use(cookieParser());
 const makeLimiter = (windowMs, max, message) =>
   rateLimit({ windowMs, max, standardHeaders: true, legacyHeaders: false,
     message: { error: message },
-    skip: (req) => !isProd && req.ip === '::1',  // Skip localhost in dev
+    skip: (req) => !isProd && req.ip === '::1',
   });
 
 app.use('/api/auth',  makeLimiter(15 * 60 * 1000, 20,  'Too many auth attempts. Try again in 15 minutes.'));
@@ -132,7 +116,6 @@ app.use((req, res) => res.status(404).json({ error: 'Route not found.' }));
 
 // ─── Global Error Handler ─────────────────────────────────
 app.use((err, req, res, next) => {
-  // Don't leak stack traces in production
   const message = isProd && err.status !== 400 && err.status !== 401 && err.status !== 429
     ? 'Something went wrong. Please try again.'
     : err.message || 'Internal server error.';
@@ -147,7 +130,6 @@ process.on('SIGTERM', () => {
 });
 
 // ─── Start Server Only Locally ───────────────────────────
-// This prevents Vercel serverless functions from crashing due to active port listeners
 if (process.env.NODE_ENV !== 'production') {
   app.listen(PORT, () => {
     console.log(`\n  🎓  CampusGPT Backend`);
@@ -159,5 +141,4 @@ if (process.env.NODE_ENV !== 'production') {
   });
 }
 
-// Export the application instance for Vercel
 module.exports = app;
