@@ -1,6 +1,6 @@
 // ============================================================
 //  CampusGPT — Auth Middleware
-//  Reads JWT from cookie or Authorization header for cross-platform compatibility
+//  Reads JWT from cookie, Authorization header, or query param for cross-platform compatibility
 // ============================================================
 
 const jwt  = require('jsonwebtoken');
@@ -9,11 +9,16 @@ const User = require('./User');
 const protect = async (req, res, next) => {
   try {
     // 1. Try reading token from cookie. 
-    // 2. Fallback to extracting it from the Authorization Bearer header (for mobile devices)
     let token = req.cookies?.token;
 
+    // 2. Fallback to extracting it from the Authorization Bearer header (for mobile devices)
     if (!token && req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
       token = req.headers.authorization.split(' ')[1];
+    }
+
+    // 3. Fallback to extracting it from query parameters (specifically for mobile streaming endpoints)
+    if (!token && req.query?.token) {
+      token = req.query.token;
     }
 
     if (!token) {
