@@ -8,6 +8,9 @@ import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
 // CRITICAL: Point directly to '/api' so it routes through our same-domain Vercel rewrite
 export const API_BASE: string = import.meta.env.VITE_API_URL || '/api';
 
+// Absolute backend URL specifically needed for streaming bypass
+const BACKEND_ABSOLUTE_URL = 'https://campusgptbackend.vercel.app';
+
 /**
  * Centralized Axios instance configuration for JSON transaction payloads
  */
@@ -58,9 +61,19 @@ export default api;
 
 /**
  * Formats data paths cleanly for the native window.fetch stream interfaces
+ * CRITICAL FIX: Appends the absolute backend URL and token directly to prevent Vercel 405 stream blockages.
  */
 export const streamURL = (path: string): string => {
-  // If path already includes /api, don't duplicate it
-  const cleanPath = path.startsWith('/api') ? path : `/api${path}`;
-  return cleanPath;
+  // Ensure the path begins cleanly with a slash
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  
+  // Strip out duplicate /api markers if they exist in the incoming path string
+  const finalPath = cleanPath.startsWith('/api') ? cleanPath.replace('/api', '') : cleanPath;
+  
+  // Extract token to add to the streaming endpoint query line
+  const token = localStorage.getItem('token');
+  const tokenParam = token ? `?token=${encodeURIComponent(token)}` : '';
+  
+  // Point directly to the backend domain for streaming data
+  return `${BACKEND_ABSOLUTE_URL}/api${finalPath}${tokenParam}`;
 };
