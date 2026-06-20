@@ -50,6 +50,19 @@ app.use(helmet({
   },
 }));
 
+// ─── Explicit Preflight Options Interceptor for Serverless ───
+// This forces Vercel serverless to acknowledge mobile preflights with credentials and tokens
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  next();
+});
+
 // ─── CORS ─────────────────────────────────────────────────
 app.use(cors({
   origin: (origin, cb) => {
@@ -80,7 +93,7 @@ app.use(cors({
   },
   credentials:    true,
   methods:        ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept'],
 }));
 
 // ─── Body Parsers ─────────────────────────────────────────
@@ -142,7 +155,7 @@ if (process.env.NODE_ENV !== 'production') {
     console.log(`  📦  env: ${process.env.NODE_ENV || 'development'}`);
     console.log(`  🗄️  MongoDB: ${process.env.MONGODB_URI ? '✅ configured' : '❌ NOT SET'}`);
     console.log(`  🤖  Groq:    ${process.env.GROQ_API_KEY ? '✅ configured' : '❌ NOT SET'}`);
-    console.log(`  🔒  JWT:     ${process.env.JWT_SECRET   ? '✅ configured' : '❌ NOT SET'}\n`);
+    console.log(`  🔒  JWT:      ${process.env.JWT_SECRET   ? '✅ configured' : '❌ NOT SET'}\n`);
   });
 }
 
