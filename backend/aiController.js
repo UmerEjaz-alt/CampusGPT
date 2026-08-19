@@ -9,7 +9,7 @@ const ChatSession = require('./Chat');
 const QuizRecord  = require('./Quiz');
 const StudyGuide  = require('./Guide');
 const GROQ_URL   = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_MODEL = 'llama-3.3-70b-versatile';
+const GROQ_MODEL = 'openai/gpt-oss-120b';
 
 const SYSTEM_PROMPTS = {
   chat: `You are CampusGPT, a knowledgeable and friendly AI academic assistant for university students.
