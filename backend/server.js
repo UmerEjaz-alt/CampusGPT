@@ -60,8 +60,10 @@ app.use(cors({
     const staticOrigins = [
       process.env.FRONTEND_URL,
       'https://campusgpt.me',
+      'https://www.campusgpt.me',
       'http://localhost:3000',
       'http://127.0.0.1:3000',
+      'http://localhost:5173'
     ].filter(Boolean).map(url => url.replace(/\/$/, ""));
 
     if (staticOrigins.includes(cleanOrigin)) {
@@ -77,7 +79,7 @@ app.use(cors({
   credentials:    true,
   methods:        ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept'],
-  optionsSuccessStatus: 200 // Responds to preflight requests smoothly for older browsers
+  optionsSuccessStatus: 200
 }));
 
 // ─── Body Parsers ─────────────────────────────────────────
@@ -130,7 +132,7 @@ process.on('SIGTERM', () => {
 });
 
 // ─── Start Server Only Locally ───────────────────────────
-if (process.env.NODE_ENV !== 'production') {
+if (!process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`\n  🎓  CampusGPT Backend`);
     console.log(`  🌐  http://localhost:${PORT}`);

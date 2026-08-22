@@ -6,12 +6,14 @@
 const jwt  = require('jsonwebtoken');
 const User = require('./User');
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 // ─── Cookie config ────────────────────────────────────────
 const COOKIE_OPTIONS = {
-  httpOnly:  true,                                  // No JS access — XSS protection
-  secure:    true,                                  // CRITICAL FOR PROD: HTTPS only for cross-domain cookies
-  sameSite:  'none',                                // CRITICAL FOR PROD: Allows cross-site cookie tracking on separate Vercel domains
-  maxAge:    7 * 24 * 60 * 60 * 1000,               // 7 days in ms
+  httpOnly:  true,
+  secure:    isProduction,                        // true on production (HTTPS), false for local dev
+  sameSite:  isProduction ? 'none' : 'lax',       // 'none' allows cross-domain cookies on Vercel
+  maxAge:    7 * 24 * 60 * 60 * 1000,             // 7 days in ms
   path:      '/',
 };
 
