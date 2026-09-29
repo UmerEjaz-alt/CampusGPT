@@ -6,7 +6,7 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
 
 // CRITICAL: Point directly to '/api' so it routes through our same-domain Vercel rewrite
-export const API_BASE: string = import.meta.env.VITE_API_URL || '/api';
+export const API_BASE: string = import.meta.env.VITE_API_URL || '';
 
 // Absolute backend URL specifically needed for streaming bypass
 const BACKEND_ABSOLUTE_URL = 'https://campusgptbackend.vercel.app';
@@ -17,7 +17,7 @@ const BACKEND_ABSOLUTE_URL = 'https://campusgptbackend.vercel.app';
 const api: AxiosInstance = axios.create({
   baseURL: API_BASE,
   withCredentials: true,
-  timeout: 30000, // 30-second boundary threshold guard
+  timeout: 60000,
 });
 
 /**
@@ -26,6 +26,9 @@ const api: AxiosInstance = axios.create({
  */
 api.interceptors.request.use(
   (config) => {
+    if (config.baseURL?.replace(/\/$/, '').endsWith('/api') && config.url?.startsWith('/api/')) {
+      config.url = config.url.slice(4);
+    }
     const token = localStorage.getItem('token');
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -49,7 +52,7 @@ api.interceptors.response.use(
   },
   (error: AxiosError) => {
     // If user token is completely invalid or expired, drop back to gateway onboarding
-    if (error.response?.status === 401 && !window.location.pathname.includes('/login')) {
+    if (error.response?.status === 401 && ['/dashboard', '/chat', '/quiz', '/guide'].includes(window.location.pathname)) {
       localStorage.removeItem('token');
       window.location.href = '/login';
     }

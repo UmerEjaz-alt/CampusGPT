@@ -79,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.warn('Session synchronization warning during cluster logout cleanup:', err);
     } finally {
+      localStorage.removeItem('token');
       // Force clean client state even if server connection returns invalid headers
       setUser(null);
     }

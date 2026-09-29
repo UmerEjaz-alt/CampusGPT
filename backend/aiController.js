@@ -31,7 +31,7 @@ Formatting:
 - Use markdown code blocks with language tags for any code
 - Separate distinct ideas into paragraphs with blank lines between them`,
 
-  quiz: `You are an academic quiz generator. Respond ONLY with a valid JSON array — no markdown, no explanation, no code fences, no text before or after the array.`,
+  quiz: `You are an academic quiz generator. Return only the requested JSON object. Keep each question accurate, unambiguous, and appropriate for university students.`,
 
   guide: `You are an academic study guide generator. Respond ONLY with a valid JSON object — no markdown, no explanation, no code fences, no text before or after the object.`,
 };
@@ -56,28 +56,28 @@ function cleanResponse(text) {
 }
 
 // ─── Build Groq request ───────────────────────────────────
-function buildGroqBody(messages, maxTokens, stream) {
-  return {
+function buildGroqBody(messages, maxTokens, stream, responseFormat) {
+  const body = {
     model:       GROQ_MODEL,
     messages,
     max_tokens:  maxTokens,
     temperature: 0.6,
     top_p:       0.9,
-    frequency_penalty: 0.4,
-    presence_penalty:  0.2,
     stream,
   };
+  if (responseFormat) body.response_format = responseFormat;
+  return body;
 }
 
 // ─── Groq fetch helper (non-streaming) ───────────────────
-async function callGroq(messages, maxTokens = 1024) {
+async function callGroq(messages, maxTokens = 1024, responseFormat) {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) throw Object.assign(new Error('GROQ_API_KEY not configured.'), { status: 500 });
 
   const res = await fetch(GROQ_URL, {
     method:  'POST',
     headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body:    JSON.stringify(buildGroqBody(messages, maxTokens, false)),
+    body:    JSON.stringify(buildGroqBody(messages, maxTokens, false, responseFormat)),
   });
 
   if (!res.ok) {
@@ -91,6 +91,80 @@ async function callGroq(messages, maxTokens = 1024) {
   const data = await res.json();
   return data?.choices?.[0]?.message?.content || '';
 }
+
+const quizResponseFormat = (count) => ({
+  type: 'json_schema',
+  json_schema: {
+    name: 'campus_quiz',
+    strict: true,
+    schema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['questions'],
+      properties: {
+        questions: {
+          type: 'array',
+          minItems: count,
+          maxItems: count,
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['q', 'options', 'ans', 'explanation'],
+            properties: {
+              q: { type: 'string' },
+              options: { type: 'array', minItems: 4, maxItems: 4, items: { type: 'string' } },
+              ans: { type: 'integer', minimum: 0, maximum: 3 },
+              explanation: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+  },
+});
+
+const guideResponseFormat = {
+  type: 'json_schema',
+  json_schema: {
+    name: 'campus_study_guide',
+    strict: true,
+    schema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['overview', 'steps'],
+      properties: {
+        overview: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['days', 'hours', 'topics', 'projects'],
+          properties: {
+            days: { type: 'integer', minimum: 1 },
+            hours: { type: 'integer', minimum: 1 },
+            topics: { type: 'integer', minimum: 1 },
+            projects: { type: 'integer', minimum: 0 },
+          },
+        },
+        steps: {
+          type: 'array',
+          minItems: 5,
+          maxItems: 7,
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['day', 'title', 'desc', 'tasks', 'resources'],
+            properties: {
+              day: { type: 'string' },
+              title: { type: 'string' },
+              desc: { type: 'string' },
+              tasks: { type: 'array', minItems: 3, maxItems: 3, items: { type: 'string' } },
+              resources: { type: 'array', minItems: 3, maxItems: 3, items: { type: 'string' } },
+            },
+          },
+        },
+      },
+    },
+  },
+};
 
 // ─── POST /api/chat/stream — SSE Streaming ────────────────
 const chatStream = async (req, res) => {
@@ -209,33 +283,25 @@ const generateQuiz = async (req, res) => {
   const { topic, difficulty, count } = req.validatedBody;
 
   const prompt = `Generate exactly ${count} multiple-choice questions about "${topic}" at ${difficulty} difficulty for university students.
-Return ONLY a valid JSON array. No markdown. No explanation. No code fences.
-Each object must have exactly: "q" (string), "options" (array of 4 strings), "ans" (integer 0-3), "explanation" (string).
-Example: [{"q":"What is X?","options":["A","B","C","D"],"ans":1,"explanation":"Because..."}]`;
+Use the provided response schema. Each question must have four plausible options, one correct answer index, and a concise explanation.`;
 
   try {
-    let raw = await callGroq([
+    const raw = await callGroq([
       { role: 'system', content: SYSTEM_PROMPTS.quiz },
       { role: 'user',   content: prompt },
-    ], 2048);
+    ], Math.max(2400, count * 450), quizResponseFormat(count));
 
-    // Strip any accidental markdown fences
-    raw = raw.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
-
-    // Extract JSON array even if there's surrounding text
-    const match = raw.match(/\[[\s\S]*\]/);
-    if (!match) return res.status(502).json({ error: 'AI returned invalid format. Please try again.' });
-
-    const questions = JSON.parse(match[0]);
-    if (!Array.isArray(questions) || !questions.length) {
-      return res.status(502).json({ error: 'No questions generated. Try a more specific topic.' });
+    const payload = JSON.parse(raw);
+    const questions = payload?.questions;
+    if (!Array.isArray(questions) || questions.length !== count) {
+      return res.status(502).json({ error: 'No complete quiz was generated. Please try again.' });
     }
 
-    const clean = questions.slice(0, count).map((q, i) => ({
-      q:           typeof q.q           === 'string' ? q.q                           : `Question ${i + 1}`,
-      options:     Array.isArray(q.options)          ? q.options.slice(0, 4)         : ['A', 'B', 'C', 'D'],
-      ans:         typeof q.ans         === 'number' ? Math.min(Math.max(q.ans,0),3) : 0,
-      explanation: typeof q.explanation === 'string' ? q.explanation                 : '',
+    const clean = questions.map((q) => ({
+      q: q.q.trim(),
+      options: q.options.map(option => option.trim()),
+      ans: q.ans,
+      explanation: q.explanation.trim(),
     }));
 
     const record = await QuizRecord.create({
@@ -288,28 +354,15 @@ const generateGuide = async (req, res) => {
   const { topic, level, duration } = req.validatedBody;
 
   const prompt = `Create a study roadmap for learning "${topic}" for a ${level} university student over ${duration}.
-Return ONLY a valid JSON object. No markdown. No explanation. No code fences.
-Required structure:
-{
-  "overview": { "days": number, "hours": number, "topics": number, "projects": number },
-  "steps": [
-    { "day": "Day 1-2", "title": "string", "desc": "string", "tasks": ["string"], "resources": ["string"] }
-  ]
-}
-Generate 5 to 7 steps. Each step must have 3 tasks and 3 resources.`;
+Use the provided response schema. Generate 5 to 7 practical steps. Every step must have exactly 3 focused tasks and 3 useful resources.`;
 
   try {
-    let raw = await callGroq([
+    const raw = await callGroq([
       { role: 'system', content: SYSTEM_PROMPTS.guide },
       { role: 'user',   content: prompt },
-    ], 2048);
+    ], 4800, guideResponseFormat);
 
-    raw = raw.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
-
-    const match = raw.match(/\{[\s\S]*\}/);
-    if (!match) return res.status(502).json({ error: 'AI returned invalid format. Please try again.' });
-
-    const data = JSON.parse(match[0]);
+    const data = JSON.parse(raw);
     if (!Array.isArray(data.steps) || !data.steps.length) {
       return res.status(502).json({ error: 'Invalid guide structure. Please try again.' });
     }
