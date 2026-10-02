@@ -30,15 +30,10 @@ const UserSchema = new mongoose.Schema({
     minlength: [8, 'Password must be at least 8 characters'],
     select:    false,  // Never return password in queries by default
   },
-  registrationNumber: {
-    type:  String,
-    trim:  true,
-    default: '',
-  },
   university: {
     type:    String,
+    required: [true, 'University is required'],
     trim:    true,
-    default: 'SZABIST',
   },
   createdAt: {
     type:    Date,

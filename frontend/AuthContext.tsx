@@ -10,8 +10,7 @@ export interface User {
   id:                  string;
   username:            string;
   email:               string;
-  registrationNumber?: string;
-  university?:         string;
+  university:          string;
   lastLogin?:          string;
 }
 
@@ -19,7 +18,6 @@ export interface RegisterData {
   username:            string;
   email:               string;
   password:            string;
-  registrationNumber?: string;
   university?:         string;
 }
 

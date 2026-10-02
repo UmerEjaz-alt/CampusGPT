@@ -25,7 +25,7 @@ const signToken = (userId) =>
 // ─── POST /api/auth/register ──────────────────────────────
 const register = async (req, res) => {
   try {
-    const { username, email, password, registrationNumber, university } = req.validatedBody;
+    const { username, email, password, university } = req.validatedBody;
 
     // Check duplicates
     const existingEmail = await User.findOne({ email });
@@ -35,7 +35,7 @@ const register = async (req, res) => {
     if (existingUsername) return res.status(409).json({ error: 'Username already taken.' });
 
     // Create user (password hashed via pre-save hook in model)
-    const user = await User.create({ username, email, password, registrationNumber, university });
+    const user = await User.create({ username, email, password, university });
 
     // Issue JWT in httpOnly cookie
     const token = signToken(user._id);
@@ -48,7 +48,6 @@ const register = async (req, res) => {
         id:                 user._id,
         username:           user.username,
         email:              user.email,
-        registrationNumber: user.registrationNumber,
         university:         user.university,
       },
     });
@@ -94,7 +93,6 @@ const login = async (req, res) => {
         id:                 user._id,
         username:           user.username,
         email:              user.email,
-        registrationNumber: user.registrationNumber,
         university:         user.university,
         lastLogin:          user.lastLogin,
       },
@@ -123,7 +121,6 @@ const getMe = async (req, res) => {
         id:                 user._id,
         username:           user.username,
         email:              user.email,
-        registrationNumber: user.registrationNumber,
         university:         user.university,
         createdAt:          user.createdAt,
         lastLogin:          user.lastLogin,

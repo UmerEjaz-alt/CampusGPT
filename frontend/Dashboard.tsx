@@ -29,7 +29,7 @@ export default function Dashboard() {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
   return <div className="workspace-page"><KnowledgeField className="workspace-field" density="low" tint="brass" /><div className="container">
-    <PageHeader title={<>{greeting}, {user?.username}.</>} description={[user?.university, user?.registrationNumber].filter(Boolean).join(' · ') || 'Make a little room for learning today.'}><div className="dashboard-date">{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}<br />Your learning workspace</div></PageHeader>
+    <PageHeader title={<>{greeting}, {user?.username}.</>} description={user?.university || 'Make a little room for learning today.'}><div className="dashboard-date">{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}<br />Your learning workspace</div></PageHeader>
     {error && <div className="alert" role="alert">Your progress couldn't be loaded. <button onClick={() => setRetry(r => r + 1)} className="text-link">Try again</button></div>}
     <section className="stats-row" aria-label="Learning statistics">{[
       ['Conversations', stats?.chatCount, '/chat'], ['Quizzes completed', stats?.quizCount, '/quiz'], ['Study plans', stats?.guideCount, '/guide'], ['Average quiz score', stats ? stats.avgScore + '%' : null, '/quiz'],

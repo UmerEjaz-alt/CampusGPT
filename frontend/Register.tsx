@@ -9,7 +9,7 @@ import KnowledgeField from './components/ui/KnowledgeField';
 export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ username: '', email: '', password: '', registrationNumber: '', university: 'SZABIST' });
+  const [form, setForm] = useState({ username: '', email: '', password: '', university: '' });
   const [show, setShow] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -25,7 +25,7 @@ export default function Register() {
       <Input label="Username" name="username" autoComplete="username" placeholder="Your name" value={form.username} onChange={change} required disabled={loading} />
       <Input label="Email address" type="email" name="email" autoComplete="email" placeholder="you@university.edu" value={form.email} onChange={change} required disabled={loading} />
       <Input label="Password" name="password" type={show ? 'text' : 'password'} autoComplete="new-password" placeholder="Create a password" value={form.password} onChange={change} required disabled={loading} trailing={<button type="button" className="icon-button" onClick={() => setShow(!show)} aria-label={show ? 'Hide password' : 'Show password'} title={show ? 'Hide password' : 'Show password'} aria-pressed={show}>{show ? <EyeOff size={18} /> : <Eye size={18} />}</button>} />
-      <div className="form-row"><Input label="University" name="university" value={form.university} onChange={change} required disabled={loading} /><Input label="Registration no." name="registrationNumber" placeholder="Optional" value={form.registrationNumber} onChange={change} disabled={loading} /></div>
+      <Input label="University" name="university" placeholder="Your university" value={form.university} onChange={change} required disabled={loading} />
       {error && <p className="alert" role="alert">{error}</p>}
       <Button type="submit" size="lg" disabled={loading || !form.username || !form.email || !form.password || !form.university}>{loading ? 'Creating your account...' : 'Create account'}<ArrowRight size={18} /></Button>
     </form><p className="auth-switch">Already have an account? <Link to="/login">Log in</Link></p></Reveal></section>
