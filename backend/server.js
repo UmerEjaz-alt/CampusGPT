@@ -20,9 +20,6 @@ const app  = express();
 const PORT = process.env.PORT || 5000;
 const isProd = process.env.NODE_ENV === 'production';
 
-// ─── Connect MongoDB ──────────────────────────────────────
-connectDB();
-
 // ─── Trust proxy (needed for Vercel / Railway) ───────────
 app.set('trust proxy', 1);
 
@@ -87,6 +84,20 @@ app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use(cookieParser());
 
+// Await one shared MongoDB connection before any database-backed API route.
+// This prevents the first request on a cold serverless instance racing startup.
+app.use('/api', async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    next(Object.assign(new Error('Database connection unavailable. Please try again.'), {
+      status: 503,
+      cause: err,
+    }));
+  }
+});
+
 // ─── Rate Limiters ────────────────────────────────────────
 const makeLimiter = (windowMs, max, message) =>
   rateLimit({ windowMs, max, standardHeaders: true, legacyHeaders: false,
@@ -133,13 +144,18 @@ process.on('SIGTERM', () => {
 
 // ─── Start Server Only Locally ───────────────────────────
 if (!process.env.VERCEL) {
-  app.listen(PORT, () => {
-    console.log(`\n  🎓  CampusGPT Backend`);
-    console.log(`  🌐  http://localhost:${PORT}`);
-    console.log(`  📦  env: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`  🗄️  MongoDB: ${process.env.MONGODB_URI ? '✅ configured' : '❌ NOT SET'}`);
-    console.log(`  🤖  Groq:    ${process.env.GROQ_API_KEY ? '✅ configured' : '❌ NOT SET'}`);
-    console.log(`  🔒  JWT:      ${process.env.JWT_SECRET   ? '✅ configured' : '❌ NOT SET'}\n`);
+  connectDB().then(() => {
+    app.listen(PORT, () => {
+      console.log(`\n  🎓  CampusGPT Backend`);
+      console.log(`  🌐  http://localhost:${PORT}`);
+      console.log(`  📦  env: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`  🗄️  MongoDB: ✅ connected`);
+      console.log(`  🤖  Groq:    ${process.env.GROQ_API_KEY ? '✅ configured' : '❌ NOT SET'}`);
+      console.log(`  🔒  JWT:      ${process.env.JWT_SECRET   ? '✅ configured' : '❌ NOT SET'}\n`);
+    });
+  }).catch((err) => {
+    console.error('❌  MongoDB connection failed:', err.message);
+    process.exitCode = 1;
   });
 }
 
